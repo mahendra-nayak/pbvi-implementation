@@ -1,8 +1,8 @@
 # VERIFICATION_RECORD.md
 
 **Session:** Session 1 — Project Scaffold & Environment
-**Date:** __________17=03-2026_____
-**Engineer:** ______Mahendra Nayak_________
+**Date:** 17-03-2026
+**Engineer:** Mahendra Nayak
 
 ---
 
@@ -31,15 +31,76 @@ grep -q API_KEY .env.example && \
 ls db/init api/app ui/index.html
 ```
 
-- T1 — [ENGINEER: predicted output]
-- T2 — [ENGINEER: predicted output]
-- T3 — [ENGINEER: predicted output]
-- T4 — [ENGINEER: predicted output]
+- T1 — [ENGINEER: .env]
+- T2 — [ENGINEER: Yes]
+- T3 — [ENGINEER: Yes]
+- T4 — [ENGINEER: Yes]
 
 ### CD Challenge Output
 
 ```
-[ENGINEER: paste Claude Code output here after running task prompt]
+ Bash(mkdir -p /c/Users/nayak/customer_api/customer-risk-api/db/init
+      /c/Users/nayak/customer_api/customer-risk-api/api/app /c/Users/nayak/customer_api/customer-risk-a…)
+  ⎿  Done
+
+● Write(customer-risk-api\docker-compose.yml)
+  ⎿  Wrote 20 lines to ..\..\..\c\Users\nayak\customer_api\customer-risk-api\docker-compose.yml
+     env_file: .env
+
+     services:
+       postgres:
+         image: postgres:16
+         environment:
+           POSTGRES_USER: ${POSTGRES_USER}
+           POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+           POSTGRES_DB: ${POSTGRES_DB}
+         ports:
+     … +10 lines (ctrl+o to expand)
+
+● Write(customer-risk-api\.env.example)
+  ⎿  Wrote 4 lines to ..\..\..\c\Users\nayak\customer_api\customer-risk-api\.env.example
+     POSTGRES_USER=changeme
+     POSTGRES_PASSWORD=changeme
+     POSTGRES_DB=customer_risk
+     API_KEY=changeme
+
+
+● Write(customer-risk-api\.gitignore)
+  ⎿  Wrote 4 lines to ..\..\..\c\Users\nayak\customer_api\customer-risk-api\.gitignore
+     .env
+     __pycache__/
+     *.pyc
+     .venv/
+
+
+● Write(customer-risk-api\README.md)
+  ⎿  Wrote 3 lines to ..\..\..\c\Users\nayak\customer_api\customer-risk-api\README.md
+     # customer-risk-api
+
+     A Docker Compose application that exposes a REST API for assessing customer risk scores. It consists of a
+     PostgreSQL database for persistent storage and a Python API service that processes customer data and returns
+     risk assessments. Copy `.env.example` to `.env` and fill in the required values before running `docker compose
+     up`.
+
+
+
+● Write(customer-risk-api\ui\index.html)
+  ⎿  Wrote 1 lines to ..\..\..\c\Users\nayak\customer_api\customer-risk-api\ui\index.html
+     (No content)
+
+● Structure created:
+
+  customer-risk-api/
+  ├── docker-compose.yml    ✓  postgres + api services, env_file: .env
+  ├── .env.example          ✓  4 placeholder vars
+  ├── .gitignore            ✓  .env, __pycache__, *.pyc, .venv
+  ├── README.md             ✓  one-paragraph stub
+  ├── db/
+  │   └── init/             ✓  empty
+  ├── api/
+  │   └── app/              ✓  empty
+  └── ui/
+      └── index.html        ✓  empty placeholder
 ```
 
 **Prompt used to challenge implementation:**
@@ -47,11 +108,11 @@ ls db/init api/app ui/index.html
 
 ### Code Review
 
-- [ ] `.env` is in `.gitignore` at the root level (not only via glob pattern)
-- [ ] `.env.example` uses placeholder values only (e.g. `API_KEY=changeme`) — no real secrets
-- [ ] All four required keys present in `.env.example`: `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `API_KEY`
-- [ ] `docker-compose.yml` declares `env_file: .env` or uses `${VAR}` syntax
-- [ ] All required directories created: `db/init/`, `api/app/`, `ui/`
+- [Yes] `.env` is in `.gitignore` at the root level (not only via glob pattern)
+- [Yes] `.env.example` uses placeholder values only (e.g. `API_KEY=changeme`) — no real secrets
+- [Yes] All four required keys present in `.env.example`: `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `API_KEY`
+- [Yes] `docker-compose.yml` declares `env_file: .env` or uses `${VAR}` syntax
+- [Yes] All required directories created: `db/init/`, `api/app/`, `ui/`
 
 **Notes:**
 
