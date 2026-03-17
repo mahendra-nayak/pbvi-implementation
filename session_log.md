@@ -1,8 +1,8 @@
 # SESSION_LOG.md
 
 **Session:** Session 1 — Project Scaffold & Environment
-**Date:** _______________
-**Engineer:** _______________
+**Date:** ____17-03-2026___________
+**Engineer:** ____Mahendra Nayak___________
 **Branch:** `session/s1_scaffold_env`
 **Claude.md version:** 1.0
 **Status:** In Progress
