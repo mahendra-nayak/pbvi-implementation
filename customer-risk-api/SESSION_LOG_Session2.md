@@ -5,7 +5,7 @@
 **Engineer:** Mahendra Nayak
 **Branch:** `session/s2_database_layer`
 **Claude.md version:** 1.0
-**Status:** In Progress
+**Status:** Completed
 
 ---
 
@@ -17,7 +17,7 @@
 | 2.2 | Seed data SQL | Completed |a3412dc |
 | 2.3 | Read-only database role wired into Compose | Completed | 0c3f14c |
 | 2.4 | psycopg2 connection module | Completed |757ff38 |
-| 2.5 | Customer lookup query function | In Progress | |
+| 2.5 | Customer lookup query function | Completed |55675fb |
 
 ---
 
@@ -47,8 +47,8 @@
 
 ## Session Completion Block
 
-- Session integration check: [ ] PASSED
-- All tasks verified: [ ] Yes
-- PR raised: [ ] Yes — PR#: `session/s2_database_layer -> main`
-- Status updated to: In Progress
-- Engineer sign-off: _______________
+- Session integration check: [Yes] PASSED
+- All tasks verified: [ Yes] Yes
+- PR raised: [ Yes] Yes — PR#: `session/s2_database_layer -> main`
+- Status updated to: Completed
+- Engineer sign-off:Mahendra Nayak
