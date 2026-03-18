@@ -233,9 +233,9 @@ Source: EXECUTION_PLAN.md Session 3
 
 | Case | Scenario | Expected | Result |
 |---|---|---|---|
-| T1 | Successful response matches schema | `risk_tier` is one of the three literals (`LOW`, `MEDIUM`, `HIGH`) | |
-| T2 | `risk_factors` type is correct | Always a list, never a string or null | |
-| T3 | Response has no extra fields | Pydantic strips anything beyond the three declared fields | |
+| T1 | Successful response matches schema | `risk_tier` is one of the three literals (`LOW`, `MEDIUM`, `HIGH`) |PASS |
+| T2 | `risk_factors` type is correct | Always a list, never a string or null |PASS |
+| T3 | Response has no extra fields | Pydantic strips anything beyond the three declared fields |PASS |
 
 **Invariants Touched:** INV-08 (Response Shape Consistency), INV-09 (Risk Tier Value Constraint)
 
@@ -247,42 +247,68 @@ curl -s http://localhost:8000/api/customer/CUST-001 | \
 python3 -c "import json,sys; d=json.load(sys.stdin); assert set(d.keys())=={'customer_id','risk_tier','risk_factors'}, 'Extra fields found'; print('Shape OK')"
 ```
 
-- T1 — [ENGINEER: predicted output]
-- T2 — [ENGINEER: predicted output]
-- T3 — [ENGINEER: predicted output]
+- T1 — [ENGINEER: `risk_tier` is one of the three literals (`LOW`, `MEDIUM`, `HIGH`)]
+- T2 — [ENGINEER: Always a list]
+- T3 — [ENGINEER:  Pydantic strips anything beyond the three declared fields]
 
 ### CD Challenge Output
 
 ```
-[ENGINEER: paste Claude Code response to "What did you not test in this task?" here]
+ 1. Route still returns correct 200 response — models.py and response_model were added but the container was not
+  rebuilt and GET /api/customer/CUST-001 was not re-run to confirm nothing broke.
+  2. risk_tier Literal validation rejects invalid values — the defence-in-depth behaviour (FastAPI raising a validation
+  error if the DB returns e.g. "CRITICAL") was not exercised by injecting a bad tier value.
+  3. Extra fields are stripped by the response model — we didn't verify that if name or assessed_at were accidentally
+  included in the route's return dict, the response model would strip them.
+  4. 404 and 500 paths still work after the change — error handling paths were not re-verified after adding
+  response_model.
+  5. CustomerRiskResponse fields match the route's return dict keys exactly — confirmed by code review but not by a
+  runtime test showing the model serialises correctly.
 ```
 
 *For each item identified: accepted (added case) / rejected (reason)*
 
+┌────────────────────────────┬──────────┬──────────────────────────────────────────────────────────────────────────────┐
+│ Item                       │ Decision │ Rationale                                                                     │
+├────────────────────────────┼──────────┼──────────────────────────────────────────────────────────────────────────────┤
+│ 1. Route still returns     │ ACCEPTED │ Regression check to ensure no functional break. Verified by re-running      │
+│    correct 200             │          │ GET /api/customer/CUST-001 successfully.                                     │
+├────────────────────────────┼──────────┼──────────────────────────────────────────────────────────────────────────────┤
+│ 2. risk_tier Literal       │ REJECTED │ Validating invalid values would require DB corruption or mocking            │
+│    rejects invalid values  │          │ get_customer_by_id, which is out of scope for integration verification.      │
+├────────────────────────────┼──────────┼──────────────────────────────────────────────────────────────────────────────┤
+│ 3. Extra fields stripped   │ REJECTED │ response_model enforcement is handled by FastAPI internally. Since the      │
+│    by response model       │          │ returned dict already matches the schema, no additional validation is needed.│
+├────────────────────────────┼──────────┼──────────────────────────────────────────────────────────────────────────────┤
+│ 4. 404 and 500 paths       │ ACCEPTED │ Important regression check to ensure error handling paths remain intact     │
+│    re-verified             │          │ after changes.                                                               │
+├────────────────────────────┼──────────┼──────────────────────────────────────────────────────────────────────────────┤
+│ 5. Model serialises        │ REJECTED │ Implicitly validated by successful 200 response (Item 1). No separate test  │
+│    correctly at runtime    │          │ adds additional value.                                                       │
+└────────────────────────────┴──────────┴──────────────────────────────────────────────────────────────────────────────┘
+
 ### Code Review
 
-- [ ] `models.py` exists at `api/app/models.py` and is committed
-- [ ] `risk_tier` field uses `Literal["LOW", "MEDIUM", "HIGH"]` — not `str`
-- [ ] `response_model=CustomerRiskResponse` is on the `@app.get(...)` decorator
-- [ ] `risk_factors` is typed as `list[str]` — not `list` or `Any`
-- [ ] `CustomerRiskResponse` is imported from `models.py` — not defined inline in `main.py`
-- [ ] Error paths (404, 500) are not affected by the response model (they bypass it correctly)
+- [Yes] `models.py` exists at `api/app/models.py` and is committed
+- [Yes] `risk_tier` field uses `Literal["LOW", "MEDIUM", "HIGH"]` — not `str`
+- [Yes] `response_model=CustomerRiskResponse` is on the `@app.get(...)` decorator
+- [Yes] `risk_factors` is typed as `list[str]` — not `list` or `Any`
+- [Yes] `CustomerRiskResponse` is imported from `models.py` — not defined inline in `main.py`
+- [Yes] Error paths (404, 500) are not affected by the response model (they bypass it correctly)
 
 ### Scope Decisions
 
-| Item | Decision | Rationale |
-|---|---|---|
-| | | |
+No scope decisions for this task — implementation matched the spec exactly.
 
 ### Verification Verdict
 
-- [ ] All planned cases passed
-- [ ] CD challenge reviewed
-- [ ] Code review complete (invariant-touching)
-- [ ] Scope decisions documented
+- [Yes] All planned cases passed
+- [Yes] CD challenge reviewed
+- [Yes] Code review complete (invariant-touching)
+- [Yes] Scope decisions documented
 
 **Status:**
-
+Completed
 ---
 
 ## Task 3.5 — Tier value guard

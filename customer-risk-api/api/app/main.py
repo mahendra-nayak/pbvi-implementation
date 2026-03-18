@@ -2,6 +2,7 @@ import os
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from app.db import get_customer_by_id
+from app.models import CustomerRiskResponse
 
 _REQUIRED_ENV_VARS = ["API_KEY", "POSTGRES_USER", "POSTGRES_PASSWORD", "POSTGRES_DB"]
 
@@ -24,7 +25,7 @@ def health():
     return {"status": "ok"}
 
 
-@app.get("/api/customer/{customer_id}")
+@app.get("/api/customer/{customer_id}", response_model=CustomerRiskResponse)
 async def get_customer(customer_id: str):
     try:
         customer = get_customer_by_id(customer_id)
