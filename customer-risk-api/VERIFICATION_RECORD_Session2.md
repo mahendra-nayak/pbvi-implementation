@@ -240,9 +240,9 @@ Source: EXECUTION_PLAN.md Session 2
 
 | Case | Scenario | Expected | Result |
 |---|---|---|---|
-| T1 | Connection succeeds with correct env vars | `SELECT 1` returns result; no exception | |
-| T2 | Wrong password → RuntimeError raised | Error message is `"Database connection failed"` — no credential details leaked | |
-| T3 | `POSTGRES_HOST` unreachable → RuntimeError raised | Same generic message | |
+| T1 | Connection succeeds with correct env vars | `SELECT 1` returns result; no exception | no exception |
+| T2 | Wrong password → RuntimeError raised | Error message is `"Database connection failed"` — no credential details leaked | Wrong password raises RuntimeError |
+| T3 | `POSTGRES_HOST` unreachable → RuntimeError raised | Same generic message |  RuntimeError|
 
 **Invariants Touched:** INV-06 (Error Surface Control — error message must not leak connection details)
 
@@ -254,42 +254,45 @@ docker compose up -d && sleep 15 && \
 docker compose exec api python app/test_db_connection.py
 ```
 
-- T1 — [ENGINEER: predicted output]
-- T2 — [ENGINEER: predicted output]
-- T3 — [ENGINEER: predicted output]
+- T1 — [ENGINEER: no exception]
+- T2 — [ENGINEER: Wong password raises RuntimeError]
+- T3 — [ENGINEER: RuntimeError ]
 
 ### CD Challenge Output
 
 ```
-[ENGINEER: paste Claude Code response to "What did you not test in this task?" here]
+
+    1. autocommit=False is set on the returned connection — never asserted conn.autocommit == False on the returned
+  object.
+  2. POSTGRES_HOST defaults to "postgres" — default is in the code but never tested by omitting the env var entirely.
+  3. Connection is a new object on each call — get_connection() called twice was never verified to return two distinct
+  connection objects.
 ```
 
 *For each item identified: accepted (added case) / rejected (reason)*
 
 ### Code Review
 
-- [ ] `except psycopg2.OperationalError` used — not bare `except Exception`
-- [ ] Raised `RuntimeError` message is a static string — no `str(e)` interpolation
-- [ ] No `print(e)` or logging of the raw psycopg2 exception anywhere in `db.py`
-- [ ] Module-level comment present noting psycopg2 is synchronous and blocks the asyncio event loop
-- [ ] `POSTGRES_HOST` defaults to `"postgres"` (the Compose service name)
-- [ ] Connection returned with `autocommit=False`
+- [Yes] `except psycopg2.OperationalError` used — not bare `except Exception`
+- [Yes] Raised `RuntimeError` message is a static string — no `str(e)` interpolation
+- [Yes] No `print(e)` or logging of the raw psycopg2 exception anywhere in `db.py`
+- [Yes] Module-level comment present noting psycopg2 is synchronous and blocks the asyncio event loop
+- [Yes] `POSTGRES_HOST` defaults to `"postgres"` (the Compose service name)
+- [Yes] Connection returned with `autocommit=False`
 
 ### Scope Decisions
 
-| Item | Decision | Rationale |
-|---|---|---|
-| | | |
+No scope decisions for Task 2.4 — implementation matched the spec exactly.
 
 ### Verification Verdict
 
-- [ ] All planned cases passed
-- [ ] CD challenge reviewed
-- [ ] Code review complete (invariant-touching)
-- [ ] Scope decisions documented
+- [Yes] All planned cases passed
+- [Yes] CD challenge reviewed
+- [Yes] Code review complete (invariant-touching)
+- [Yes] Scope decisions documented
 
 **Status:**
-
+Completed
 ---
 
 ## Task 2.5 — Customer lookup query function
