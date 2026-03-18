@@ -1,8 +1,8 @@
 # SESSION_LOG.md
 
 **Session:** Session 2 — Database Layer
-**Date:** _______________
-**Engineer:** _______________
+**Date:** 18-03-2026
+**Engineer:** Mahendra Nayak
 **Branch:** `session/s2_database_layer`
 **Claude.md version:** 1.0
 **Status:** In Progress
@@ -13,8 +13,8 @@
 
 | Task ID | Task Name | Status | Commit |
 |---|---|---|---|
-| 2.1 | Schema creation SQL | NOT STARTED | |
-| 2.2 | Seed data SQL | NOT STARTED | |
+| 2.1 | Schema creation SQL | Completed |5c938bc |
+| 2.2 | Seed data SQL | In Progress |a3412dc |
 | 2.3 | Read-only database role wired into Compose | NOT STARTED | |
 | 2.4 | psycopg2 connection module | NOT STARTED | |
 | 2.5 | Customer lookup query function | NOT STARTED | |
