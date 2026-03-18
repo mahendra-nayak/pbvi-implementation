@@ -1,8 +1,8 @@
 # SESSION_LOG.md
 
 **Session:** Session 3 — API Core Endpoints
-**Date:** _______________
-**Engineer:** _______________
+**Date:** 18-03-2026
+**Engineer:** Mahendra Nayak
 **Branch:** `session/s3_api_core_endpoints`
 **Claude.md version:** 1.0
 **Status:** In Progress
@@ -15,7 +15,7 @@
 
 | Task ID | Task Name | Status | Commit |
 |---|---|---|---|
-| 3.1 | Customer lookup route (happy path) | NOT STARTED | |
+| 3.1 | Customer lookup route (happy path) | Completed |2a55083 |
 | 3.2 | 404 handling (customer not found) | NOT STARTED | |
 | 3.3 | 500 handling (database errors) | NOT STARTED | |
 | 3.4 | Response shape enforcement | NOT STARTED | |
