@@ -57,6 +57,6 @@
   curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8000/api/customer/CUST-999
   ```
   Expected: `SMOKE TEST PASSED`, valid JSON with three fields, `404`
-- All tasks verified: [ ] Yes
-- PR raised: [ ] Yes — PR#: `session/s3_api_core_endpoints -> main`
-- Engineer sign-off: _______________
+- All tasks verified: Yes
+- PR raised: Yes — PR#: `session/s3_api_core_endpoints -> main`
+- Engineer sign-off: Mahendra Nayak
