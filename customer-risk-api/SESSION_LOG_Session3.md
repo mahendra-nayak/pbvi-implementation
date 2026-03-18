@@ -19,7 +19,7 @@
 | 3.2 | 404 handling (customer not found) | Completed |eed037c |
 | 3.3 | 500 handling (database errors) | Completed |49acf4e |
 | 3.4 | Response shape enforcement | Completed |d4b5a09 |
-| 3.5 | Tier value guard | In Progress | |
+| 3.5 | Tier value guard | Completed |0feb282 |
 | 3.6 | Startup readiness and database availability | NOT STARTED | |
 
 ---
