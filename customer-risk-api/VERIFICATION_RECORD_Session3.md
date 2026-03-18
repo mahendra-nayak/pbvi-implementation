@@ -84,10 +84,10 @@ Source: EXECUTION_PLAN.md Session 3
 
 | Case | Scenario | Expected | Result |
 |---|---|---|---|
-| T1 | Known ID → 200 | Unchanged from Task 3.1 | |
-| T2 | Unknown ID `CUST-NONEXISTENT` → 404 | Status 404; body `{"detail": "Customer not found"}` | |
-| T3 | Error body does not echo customer_id | Body does not contain the customer_id value | |
-| T4 | Error body is static | Same body for any unknown ID | |
+| T1 | Known ID → 200 | Unchanged from Task 3.1 | PASS|
+| T2 | Unknown ID `CUST-NONEXISTENT` → 404 | Status 404; body `{"detail": "Customer not found"}` |PASS |
+| T3 | Error body does not echo customer_id | Body does not contain the customer_id value | PASS|
+| T4 | Error body is static | Same body for any unknown ID | PASS|
 
 **Invariants Touched:** INV-02 (Existence Mapping Integrity), INV-06 (Error Surface Control)
 
@@ -99,42 +99,42 @@ curl -s -o /dev/null -w "%{http_code}" http://localhost:8000/api/customer/CUST-N
 curl -s http://localhost:8000/api/customer/CUST-NONEXISTENT | grep -q '"Customer not found"'
 ```
 
-- T1 — [ENGINEER: predicted output]
-- T2 — [ENGINEER: predicted output]
-- T3 — [ENGINEER: predicted output]
-- T4 — [ENGINEER: predicted output]
+- T1 — [ENGINEER:  Status 200]
+- T2 — [ENGINEER: Status 404]
+- T3 — [ENGINEER: Body does not contain the customer_id value]
+- T4 — [ENGINEER: Same body for any unknown ID]
 
 ### CD Challenge Output
 
 ```
-[ENGINEER: paste Claude Code response to "What did you not test in this task?" here]
+  1. No customer_id value appears anywhere in the 404 body — confirmed by eye from the output but not asserted with a
+  grep or JSON parse check.
+  2. Response Content-Type is application/json — not checked with curl -I or -v.
 ```
 
 *For each item identified: accepted (added case) / rejected (reason)*
 
 ### Code Review
 
-- [ ] 404 branch is `if result is None` — not a caught exception
-- [ ] The `detail` string is hardcoded as `"Customer not found"` — no f-string or variable interpolation
-- [ ] The customer_id path value is NOT included anywhere in the 404 response body
-- [ ] No DB error can fall through to this branch (a raised RuntimeError goes to the 500 path, not here)
-- [ ] `HTTPException(status_code=404, ...)` is used (not a manual JSONResponse with wrong status)
+- [Yes] 404 branch is `if result is None` — not a caught exception
+- [Yes] The `detail` string is hardcoded as `"Customer not found"` — no f-string or variable interpolation
+- [Yes] The customer_id path value is NOT included anywhere in the 404 response body
+- [Yes] No DB error can fall through to this branch (a raised RuntimeError goes to the 500 path, not here)
+- [Yes] `HTTPException(status_code=404, ...)` is used (not a manual JSONResponse with wrong status)
 
 ### Scope Decisions
 
-| Item | Decision | Rationale |
-|---|---|---|
-| | | |
+No scope decisions for this task — implementation matched the spec exactly.
 
 ### Verification Verdict
 
-- [ ] All planned cases passed
-- [ ] CD challenge reviewed
-- [ ] Code review complete (invariant-touching)
-- [ ] Scope decisions documented
+- [Yes] All planned cases passed
+- [Yes] CD challenge reviewed
+- [Yes] Code review complete (invariant-touching)
+- [Yes] Scope decisions documented
 
 **Status:**
-
+Completed
 ---
 
 ## Task 3.3 — 500 handling (database errors)
@@ -381,9 +381,25 @@ curl -sf http://localhost:8000/health | grep '"status"'
 
 ## Test Cases Added During Session
 
-| Task | Case ID | Scenario | Expected | Result | Reason Added |
-|---|---|---|---|---|---|
-| | | | | | |
+┌────────┬────────────┬──────────────────────────────────────────────┬──────────────────────────┬────────┬──────────────────────────────────────────────┐
+│ Task   │ Case ID    │ Scenario                                     │ Expected                 │ Result │ Reason Added                                 │
+├────────┼────────────┼──────────────────────────────────────────────┼──────────────────────────┼────────┼──────────────────────────────────────────────┤
+│ 2.1    │ T5         │ Re-run schema script on existing DB          │ No error, exit 0         │ —      │ CD challenge: idempotency not in original   │
+│        │            │ (idempotency)                                │                          │        │ plan                                        │
+├────────┼────────────┼──────────────────────────────────────────────┼──────────────────────────┼────────┼──────────────────────────────────────────────┤
+│ 2.4    │ T3         │ POSTGRES_HOST unreachable → RuntimeError     │ "Database connection     │ PASS   │ CD challenge: T3 was not run during initial │
+│        │            │                                              │ failed"                  │        │ verification                                │
+├────────┼────────────┼──────────────────────────────────────────────┼──────────────────────────┼────────┼──────────────────────────────────────────────┤
+│ Route  │ T-extra-1  │ Known ID returns 200 after None check added  │ HTTP 200, correct body   │ PASS   │ Regression check after 404 logic introduced │
+│ 404    │            │                                              │                          │        │                                              │
+├────────┼────────────┼──────────────────────────────────────────────┼──────────────────────────┼────────┼──────────────────────────────────────────────┤
+│ Route  │ T-extra-2  │ DB down → 500, not 404                       │ HTTP 500                 │ PASS   │ Verify 404 and DB error paths are distinct  │
+│ 404    │            │                                              │                          │        │                                              │
+├────────┼────────────┼──────────────────────────────────────────────┼──────────────────────────┼────────┼──────────────────────────────────────────────┤
+│ Route  │ T-extra-3  │ 404 body key is exactly "detail"             │ {"detail": ...} only     │ PASS   │ CD challenge: key name not asserted in      │
+│ 404    │            │                                              │                          │        │ original test                               │
+└────────┴────────────┴──────────────────────────────────────────────┴──────────────────────────┴────────┴──────────────────────────────────────────────┘
+
 
 ---
 

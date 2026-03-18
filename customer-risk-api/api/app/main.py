@@ -20,6 +20,8 @@ def health():
 @app.get("/api/customer/{customer_id}")
 async def get_customer(customer_id: str):
     customer = get_customer_by_id(customer_id)
+    if customer is None:
+        return JSONResponse(status_code=404, content={"detail": "Customer not found"})
     return JSONResponse(status_code=200, content={
         "customer_id": customer["customer_id"],
         "risk_tier": customer["risk_tier"],
