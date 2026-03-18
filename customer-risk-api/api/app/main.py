@@ -1,7 +1,9 @@
 import os
+import sys
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
-from app.db import get_customer_by_id
+from app.db import get_connection, get_customer_by_id
 from app.models import CustomerRiskResponse
 from app.constants import VALID_TIERS
 
@@ -11,7 +13,26 @@ for _var in _REQUIRED_ENV_VARS:
     if not os.environ.get(_var):
         raise RuntimeError(f"Missing required environment variable: {_var}")
 
-app = FastAPI()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    conn = None
+    try:
+        conn = get_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT 1")
+        cur.close()
+        print("Database connection verified.", flush=True)
+    except (RuntimeError, Exception):
+        print("FATAL: Cannot connect to database at startup. Check DB credentials and host.", flush=True)
+        sys.exit(1)
+    finally:
+        if conn is not None:
+            conn.close()
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
 
 _INTERNAL_ERROR = {"detail": "Internal server error"}
 
