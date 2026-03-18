@@ -17,7 +17,7 @@
 | 2.2 | Seed data SQL | Completed |a3412dc |
 | 2.3 | Read-only database role wired into Compose | Completed | 0c3f14c |
 | 2.4 | psycopg2 connection module | Completed |757ff38 |
-| 2.5 | Customer lookup query function | NOT STARTED | |
+| 2.5 | Customer lookup query function | In Progress | |
 
 ---
 

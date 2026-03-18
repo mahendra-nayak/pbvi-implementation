@@ -29,3 +29,37 @@ def get_connection():
         return conn
     except psycopg2.OperationalError:
         raise RuntimeError("Database connection failed")
+
+
+def get_customer_by_id(customer_id: str) -> dict | None:
+    """Look up a customer by ID.
+
+    Returns a dict with keys: customer_id (str), name (str), risk_tier (str),
+    risk_factors (list of str).
+
+    Returns None if no matching record exists.
+
+    Raises RuntimeError("Database query failed") on any database error —
+    the raw psycopg2 error is not propagated.
+    """
+    conn = get_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT customer_id, name, risk_tier, risk_factors"
+            " FROM customers WHERE customer_id = %s",
+            (customer_id,),
+        )
+        row = cur.fetchone()
+        if row is None:
+            return None
+        return {
+            "customer_id": row[0],
+            "name": row[1],
+            "risk_tier": row[2],
+            "risk_factors": row[3],
+        }
+    except psycopg2.Error:
+        raise RuntimeError("Database query failed")
+    finally:
+        conn.close()

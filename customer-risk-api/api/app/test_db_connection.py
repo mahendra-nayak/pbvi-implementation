@@ -4,7 +4,7 @@ Run inside the api container:
     docker compose exec api python app/test_db_connection.py
 """
 
-from db import get_connection
+from db import get_connection, get_customer_by_id
 
 
 def main():
@@ -17,6 +17,9 @@ def main():
         print("DB connection OK")
     except RuntimeError as e:
         print(f"DB connection FAILED: {e}")
+
+    print(get_customer_by_id("CUST-001"))
+    print(get_customer_by_id("CUST-NONEXISTENT") or "None (expected)")
 
 
 if __name__ == "__main__":
