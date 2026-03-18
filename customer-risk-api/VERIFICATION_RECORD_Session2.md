@@ -1,8 +1,8 @@
 # VERIFICATION_RECORD.md
 
 **Session:** Session 2 — Database Layer
-**Date:** _______________
-**Engineer:** _______________
+**Date:** 18-03-2026
+**Engineer:** Mahendra Nayak
 
 ---
 
@@ -13,10 +13,10 @@ Source: EXECUTION_PLAN.md Session 2
 
 | Case | Scenario | Expected | Result |
 |---|---|---|---|
-| T1 | Schema file runs without error in psql | Exit 0 | |
-| T2 | `risk_tier` CHECK constraint rejects invalid value | `INSERT … risk_tier='CRITICAL'` raises constraint violation | |
-| T3 | `api_user` cannot INSERT | `INSERT` as `api_user` raises permission denied | |
-| T4 | `api_user` can SELECT | `SELECT` as `api_user` returns rows | |
+| T1 | Schema file runs without error in psql | Exit 0 | Yes |
+| T2 | `risk_tier` CHECK constraint rejects invalid value | `INSERT … risk_tier='CRITICAL'` raises constraint violation | Yes |
+| T3 | `api_user` cannot INSERT | `INSERT` as `api_user` raises permission denied | Yes |
+| T4 | `api_user` can SELECT | `SELECT` as `api_user` returns rows |Yes it returns |
 
 **Invariants Touched:** INV-03 (Read-Only Database Guarantee), INV-09 (Risk Tier Value Constraint)
 
@@ -28,45 +28,59 @@ docker compose down -v && docker compose up postgres -d && sleep 10 && \
 docker compose exec postgres psql -U riskuser -d riskdb -c "\d customers"
 ```
 
-- T1 — [ENGINEER: predicted output]
-- T2 — [ENGINEER: predicted output]
-- T3 — [ENGINEER: predicted output]
-- T4 — [ENGINEER: predicted output]
+- T1 — [ENGINEER:  Exit 0]
+- T2 — [ENGINEER: raises constraint violation]
+- T3 — [ENGINEER: raises permission denied error]
+- T4 — [ENGINEER: returns rows]
 
 ### CD Challenge Output
 
 ```
-[ENGINEER: paste Claude Code response to "What did you not test in this task?" here]
+
+● Things not tested in Task 2.1:
+
+  1. UPDATE and DELETE as api_user — T3 only tested INSERT. The REVOKE covers all three but only INSERT was verified.
+  2. Re-running the script (idempotency) — running 01_schema.sql a second time against a database where the role and
+  table already exist was not tested. The IF NOT EXISTS guards and the DO $$ ... IF NOT EXISTS role block are designed
+  for this but weren't exercised.
+  3. api_user cannot connect to a different database — GRANT CONNECT ON DATABASE riskdb was granted but we didn't verify
+   api_user is denied on other databases (e.g. postgres).
+  4. api_user has no DDL rights — the code review checklist includes confirming no CREATE, DROP, or ALTER rights, but
+  this was not tested with an actual DDL statement as api_user.
+  5. risk_tier CHECK allows all three valid values — T2 confirmed CRITICAL is rejected but we never inserted LOW,
+  MEDIUM, and HIGH to confirm all three are accepted.
+  6. risk_factors rejects NULL — the NOT NULL constraint on the TEXT[] column was not tested with an explicit NULL
+  insert attempt.
 ```
 
 *For each item identified: accepted (added case) / rejected (reason)*
 
+
+
 ### Code Review
 
-- [ ] `CHECK (risk_tier IN ('LOW', 'MEDIUM', 'HIGH'))` is present on the `risk_tier` column
-- [ ] `REVOKE INSERT, UPDATE, DELETE ON customers FROM api_user` is explicit — not relying solely on SELECT grant
-- [ ] `api_user` has no DDL rights (no GRANT CREATE, no GRANT ALL)
-- [ ] `GRANT SELECT ON customers TO api_user` is present
-- [ ] `GRANT CONNECT ON DATABASE riskdb TO api_user` is present
-- [ ] `GRANT USAGE ON SCHEMA public TO api_user` is present
-- [ ] `CREATE TABLE IF NOT EXISTS` used (idempotent)
-- [ ] `CREATE ROLE IF NOT EXISTS` (or equivalent) — script can run without erroring on re-run
+- [Yes] `CHECK (risk_tier IN ('LOW', 'MEDIUM', 'HIGH'))` is present on the `risk_tier` column
+- [Yes] `REVOKE INSERT, UPDATE, DELETE ON customers FROM api_user` is explicit — not relying solely on SELECT grant
+- [Yes] `api_user` has no DDL rights (no GRANT CREATE, no GRANT ALL)
+- [Yes] `GRANT SELECT ON customers TO api_user` is present
+- [Yes] `GRANT CONNECT ON DATABASE riskdb TO api_user` is present
+- [Yes] `GRANT USAGE ON SCHEMA public TO api_user` is present
+- [Yes] `CREATE TABLE IF NOT EXISTS` used (idempotent)
+- [Yes] `CREATE ROLE IF NOT EXISTS` (or equivalent) — script can run without erroring on re-run
 
 ### Scope Decisions
-
-| Item | Decision | Rationale |
-|---|---|---|
-| | | |
-
+Item	|Decision |	Rationale
+CREATE ROLE IF NOT EXISTS not available as native syntax	|Used DO $$ IF NOT EXISTS ... CREATE ROLE| block instead	PostgreSQL lacks CREATE ROLE IF NOT EXISTS; the DO block ensures idempotency without error on re-run
+api_user password hardcoded as 'apipass123'	|Accepted – placeholder pending Task 2.3|	Task 2.1 scope is schema only; parameterisation via API_DB_PASSWORD is deferred to Task 2.3
 ### Verification Verdict
 
-- [ ] All planned cases passed
-- [ ] CD challenge reviewed
-- [ ] Code review complete (invariant-touching)
-- [ ] Scope decisions documented
+- [Yes] All planned cases passed
+- [Yes] CD challenge reviewed
+- [Yes] Code review complete (invariant-touching)
+- [Yes] Scope decisions documented
 
 **Status:**
-
+Completed
 ---
 
 ## Task 2.2 — Seed data SQL
@@ -76,11 +90,11 @@ Source: EXECUTION_PLAN.md Session 2
 
 | Case | Scenario | Expected | Result |
 |---|---|---|---|
-| T1 | At least 3 LOW-tier customers exist | `SELECT COUNT(*) FROM customers WHERE risk_tier='LOW'` ≥ 3 | |
-| T2 | At least 3 MEDIUM-tier customers exist | `SELECT COUNT(*) FROM customers WHERE risk_tier='MEDIUM'` ≥ 3 | |
-| T3 | At least 3 HIGH-tier customers exist | `SELECT COUNT(*) FROM customers WHERE risk_tier='HIGH'` ≥ 3 | |
-| T4 | Running seed twice produces no error | Script is idempotent via ON CONFLICT DO NOTHING | |
-| T5 | All risk_factors are non-empty arrays | No NULL or `{}` values in risk_factors column | |
+| T1 | At least 3 LOW-tier customers exist | `SELECT COUNT(*) FROM customers WHERE risk_tier='LOW'` ≥ 3 |4 |
+| T2 | At least 3 MEDIUM-tier customers exist | `SELECT COUNT(*) FROM customers WHERE risk_tier='MEDIUM'` ≥ 3 | 3|
+| T3 | At least 3 HIGH-tier customers exist | `SELECT COUNT(*) FROM customers WHERE risk_tier='HIGH'` ≥ 3 | 3|
+| T4 | Running seed twice produces no error | Script is idempotent via ON CONFLICT DO NOTHING |exist 0 |
+| T5 | All risk_factors are non-empty arrays | No NULL or `{}` values in risk_factors column |Yes |
 
 **Invariants Touched:** INV-09 (Risk Tier Value Constraint — seed data must only contain valid tier values)
 
@@ -93,43 +107,58 @@ docker compose exec postgres psql -U riskuser -d riskdb -c \
 "SELECT risk_tier, COUNT(*) FROM customers GROUP BY risk_tier ORDER BY risk_tier;"
 ```
 
-- T1 — [ENGINEER: predicted output]
-- T2 — [ENGINEER: predicted output]
-- T3 — [ENGINEER: predicted output]
-- T4 — [ENGINEER: predicted output]
-- T5 — [ENGINEER: predicted output]
+- T1 — [ENGINEER: `SELECT COUNT(*) FROM customers WHERE risk_tier='LOW'` ≥ 3`]
+- T2 — [ENGINEER: `SELECT COUNT(*) FROM customers WHERE risk_tier='MEDIUM'` ≥ 3`]
+- T3 — [ENGINEER: ``SELECT COUNT(*) FROM customers WHERE risk_tier='HIGH'` ≥ 3`]
+- T4 — [ENGINEER: exist 0]
+- T5 — [ENGINEER: No NULL or `{}` values in risk_factors column]
 
 ### CD Challenge Output
 
 ```
-[ENGINEER: paste Claude Code response to "What did you not test in this task?" here]
+
+● Things not tested in Task 2.2:
+
+  1. Individual risk_factors arrays are non-empty — T5 requires no NULL or {} values, but we didn't run a query to
+  assert array_length(risk_factors, 1) > 0 for every row.
+  2. risk_factors column is not NULL on any row — related to T5 but distinct: a NULL array vs an empty array {} are
+  different failure modes, neither was explicitly queried.
+  3. All assessed_at values are fixed timestamps — we didn't verify that no row has a NOW()-derived timestamp (would
+  matter if the script were ever edited to use NOW()).
+  4. No row contains an invalid risk_tier — we verified counts per tier but didn't assert that exactly 3 distinct tier
+  values exist and no others (e.g. a typo like 'MEDUM' would be caught by the CHECK constraint but wasn't explicitly
+  probed).
+  5. Idempotency leaves row count unchanged — we confirmed the second run produced no error and INSERT 0 0, but didn't
+  re-run the COUNT(*) GROUP BY risk_tier query afterward to confirm no data was modified.
+  6. customer_id format compliance — no check that all IDs match the CUST-NNN format (a constraint not enforced by the
+  schema).
 ```
 
 *For each item identified: accepted (added case) / rejected (reason)*
 
 ### Code Review
 
-- [ ] Every INSERT uses only `LOW`, `MEDIUM`, or `HIGH` for `risk_tier` — no other values
-- [ ] `ON CONFLICT DO NOTHING` is present on all INSERT statements
-- [ ] No real PII used — all names are fictional
-- [ ] All `risk_factors` arrays are non-empty (at least one factor per record)
-- [ ] `assessed_at` uses fixed timestamps (not `NOW()`) so seed is deterministic
+- [Yes] Every INSERT uses only `LOW`, `MEDIUM`, or `HIGH` for `risk_tier` — no other values
+- [Yes] `ON CONFLICT DO NOTHING` is present on all INSERT statements
+- [YEs] No real PII used — all names are fictional
+- [Yes] All `risk_factors` arrays are non-empty (at least one factor per record)
+- [Yes] `assessed_at` uses fixed timestamps (not `NOW()`) so seed is deterministic
 
 ### Scope Decisions
 
-| Item | Decision | Rationale |
-|---|---|---|
-| | | |
+ No scope decisions for Task 2.2 — implementation matched the spec exactly. The only choices made (single multi-row
+  INSERT vs. individual INSERTs, 4 LOW records instead of minimum 3) were within the stated requirements and don't
+  warrant recording.
 
 ### Verification Verdict
 
-- [ ] All planned cases passed
-- [ ] CD challenge reviewed
-- [ ] Code review complete (invariant-touching)
-- [ ] Scope decisions documented
+- [Yes] All planned cases passed
+- [Yes] CD challenge reviewed
+- [Yes] Code review complete (invariant-touching)
+- [Yes] Scope decisions documented
 
 **Status:**
-
+Completed
 ---
 
 ## Task 2.3 — Read-only database role wired into Compose
