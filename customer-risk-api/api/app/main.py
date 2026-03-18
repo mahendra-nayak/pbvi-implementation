@@ -3,6 +3,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from app.db import get_customer_by_id
 from app.models import CustomerRiskResponse
+from app.constants import VALID_TIERS
 
 _REQUIRED_ENV_VARS = ["API_KEY", "POSTGRES_USER", "POSTGRES_PASSWORD", "POSTGRES_DB"]
 
@@ -33,6 +34,8 @@ async def get_customer(customer_id: str):
         return JSONResponse(status_code=500, content=_INTERNAL_ERROR)
     if customer is None:
         return JSONResponse(status_code=404, content={"detail": "Customer not found"})
+    if customer["risk_tier"] not in VALID_TIERS:
+        raise RuntimeError("Database query failed")
     return JSONResponse(status_code=200, content={
         "customer_id": customer["customer_id"],
         "risk_tier": customer["risk_tier"],

@@ -318,9 +318,9 @@ Source: EXECUTION_PLAN.md Session 3
 
 | Case | Scenario | Expected | Result |
 |---|---|---|---|
-| T1 | Normal tier values → 200 | Unchanged | |
-| T2 | If DB returned `CRITICAL` (manually injected) → 500 | Returns 500, not a response with invalid tier | |
-| T3 | VALID_TIERS is in constants.py, not inline | `grep VALID_TIERS api/app/main.py` → import reference only | |
+| T1 | Normal tier values → 200 | Unchanged | PASS|
+| T2 | If DB returned `CRITICAL` (manually injected) → 500 | Returns 500, not a response with invalid tier | PASS|
+| T3 | VALID_TIERS is in constants.py, not inline | `grep VALID_TIERS api/app/main.py` → import reference only |PASS |
 
 **Invariants Touched:** INV-09 (Risk Tier Value Constraint)
 
@@ -336,41 +336,75 @@ docker compose exec postgres psql -U riskuser -d riskdb -c \
 "UPDATE customers SET risk_tier='HIGH' WHERE customer_id='CUST-001';"
 ```
 
-- T1 — [ENGINEER: predicted output]
-- T2 — [ENGINEER: predicted output]
-- T3 — [ENGINEER: predicted output]
+- T1 — [ENGINEER:  HTTP 200]
+- T2 — [ENGINEER: 500]
+- T3 — [ENGINEER:grep VALID_TIERS api/app/main.py returns import line and usage line only]
 
 ### CD Challenge Output
 
 ```
-[ENGINEER: paste Claude Code response to "What did you not test in this task?" here]
+  1. All three valid tiers pass the guard — only LOW (T1) was tested against the guard. MEDIUM and HIGH were not
+  requested to confirm they all pass through to 200.
+  2. Guard fires specifically on the tier check, not the DB error path — T2 confirmed 500 is returned for CRITICAL, but
+  we didn't assert the RuntimeError came from the tier guard rather than a DB error (both produce identical 500
+  responses).
+  3. VALID_TIERS in constants.py contains exactly the three correct values — confirmed by code review but never asserted
+   programmatically (e.g. importing and checking the set contents).
+  4. Response body for invalid tier contains no tier value — confirmed by eye that {"detail":"Internal server error"}
+  does not include "CRITICAL", but not asserted with a string check.
+  5. CHECK constraint was dropped for T2 testing and not restored — the customers_risk_tier_check constraint was dropped
+   to inject CRITICAL. It was not re-added after the test, leaving the database in a modified state from the original
+  schema.
 ```
 
 *For each item identified: accepted (added case) / rejected (reason)*
 
+┌─────────────────────────────┬──────────┬──────────────────────────────────────────────────────────────────────────────┐
+│ Item                        │ Decision │ Rationale                                                                     │
+├─────────────────────────────┼──────────┼──────────────────────────────────────────────────────────────────────────────┤
+│ 1. All three valid tiers    │ REJECTED │ The guard logic is not dependent on individual tier values. If LOW passes,   │
+│    pass the guard           │          │ MEDIUM and HIGH will also pass via the same code path. No distinct behavior. │
+├─────────────────────────────┼──────────┼──────────────────────────────────────────────────────────────────────────────┤
+│ 2. Guard vs DB error path   │ REJECTED │ Both scenarios intentionally return identical HTTP 500 responses.            │
+│    distinction              │          │ Differentiation would require internal inspection, which is out of scope     │
+│                             │          │ for black-box verification.                                                   │
+├─────────────────────────────┼──────────┼──────────────────────────────────────────────────────────────────────────────┤
+│ 3. VALID_TIERS set contents │ REJECTED │ Defined as a simple constant in code. Verified via code review;              │
+│    asserted programmatically│          │ programmatic validation adds no additional value.                            │
+├─────────────────────────────┼──────────┼──────────────────────────────────────────────────────────────────────────────┤
+│ 4. Response body contains   │ REJECTED │ Error response is built from a constant (_INTERNAL_ERROR). No dynamic        │
+│    no tier value            │          │ interpolation is possible.                                                   │
+├─────────────────────────────┼──────────┼──────────────────────────────────────────────────────────────────────────────┤
+│ 5. CHECK constraint not     │ ACCEPTED │ Critical integrity check. The constraint (customers_risk_tier_check) was     │
+│    restored after T2        │          │ temporarily removed and must be restored to maintain INV-09.                 │
+└─────────────────────────────┴──────────┴──────────────────────────────────────────────────────────────────────────────┘
+
 ### Code Review
 
-- [ ] Guard raises `RuntimeError` — not `HTTPException`, not a custom 4xx
-- [ ] `VALID_TIERS` is defined in `api/app/constants.py` — not inline in `main.py`
-- [ ] `main.py` imports `VALID_TIERS` from `constants` — grep for inline `{"LOW", "MEDIUM", "HIGH"}` in `main.py` → zero matches
-- [ ] Guard runs AFTER the None check (not-found case) and BEFORE the response is constructed
-- [ ] `constants.py` is in source control
+- [Yes] Guard raises `RuntimeError` — not `HTTPException`, not a custom 4xx
+- [Yes] `VALID_TIERS` is defined in `api/app/constants.py` — not inline in `main.py`
+- [Yes] `main.py` imports `VALID_TIERS` from `constants` — grep for inline `{"LOW", "MEDIUM", "HIGH"}` in `main.py` → zero matches
+- [Yes] Guard runs AFTER the None check (not-found case) and BEFORE the response is constructed
+- [Yes] `constants.py` is in source control
 
 ### Scope Decisions
 
-| Item | Decision | Rationale |
-|---|---|---|
-| | | |
+┌──────────────────────────────┬──────────┬──────────────────────────────────────────────────────────────┐
+│ Item                         │ Decision │ Rationale                                                   │
+├──────────────────────────────┼──────────┼──────────────────────────────────────────────────────────────┤
+│ CHECK constraint dropped     │ ACCEPTED │ Dropped for CRITICAL tier testing; must be restored to      │
+│ for T2 testing               │          │ maintain INV-09 and ensure data integrity                  │
+└──────────────────────────────┴──────────┴──────────────────────────────────────────────────────────────┘
 
 ### Verification Verdict
 
-- [ ] All planned cases passed
-- [ ] CD challenge reviewed
-- [ ] Code review complete (invariant-touching)
-- [ ] Scope decisions documented
+- [Yes] All planned cases passed
+- [Yes] CD challenge reviewed
+- [Yes] Code review complete (invariant-touching)
+- [Yes] Scope decisions documented
 
 **Status:**
-
+Completed
 ---
 
 ## Task 3.6 — Startup readiness and database availability

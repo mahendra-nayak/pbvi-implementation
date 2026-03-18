@@ -1,0 +1,1 @@
+VALID_TIERS = {"LOW", "MEDIUM", "HIGH"}
