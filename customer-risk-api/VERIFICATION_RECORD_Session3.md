@@ -144,10 +144,10 @@ Source: EXECUTION_PLAN.md Session 3
 
 | Case | Scenario | Expected | Result |
 |---|---|---|---|
-| T1 | DB layer raises RuntimeError → 500 | Status 500; body `{"detail": "Internal server error"}` | |
-| T2 | 500 body contains no stack trace | Response body has no `Traceback`, `psycopg2`, file path | |
-| T3 | 500 body contains no SQL | No `SELECT`, `FROM`, `WHERE` in response body | |
-| T4 | 404 still works after this change | Unknown ID still returns 404, not 500 | |
+| T1 | DB layer raises RuntimeError → 500 | Status 500; body `{"detail": "Internal server error"}` | PASS|
+| T2 | 500 body contains no stack trace | Response body has no `Traceback`, `psycopg2`, file path |PASS |
+| T3 | 500 body contains no SQL | No `SELECT`, `FROM`, `WHERE` in response body |PASS |
+| T4 | 404 still works after this change | Unknown ID still returns 404, not 500 |PASS |
 
 **Invariants Touched:** INV-02 (Existence Mapping Integrity), INV-06 (Error Surface Control)
 
@@ -161,42 +161,69 @@ curl -s http://localhost:8000/api/customer/CUST-001 | python3 -m json.tool && \
 docker compose start postgres
 ```
 
-- T1 — [ENGINEER: predicted output]
-- T2 — [ENGINEER: predicted output]
-- T3 — [ENGINEER: predicted output]
-- T4 — [ENGINEER: predicted output]
+- T1 — [ENGINEER: Status 500; body `{"detail": "Internal server error"}]
+- T2 — [ENGINEER: {"detail":"Internal server error"}]
+- T3 — [ENGINEER: {"detail":"Internal server error"}, HTTP 500. No exception message or stack trace in the response]
+- T4 — [ENGINEER: 404]
 
 ### CD Challenge Output
 
 ```
-[ENGINEER: paste Claude Code response to "What did you not test in this task?" here]
+ 1. Global exception handler fires for non-RuntimeError exceptions — we only tested RuntimeError from the DB layer. The
+   global Exception handler was not exercised with a different exception type (e.g. ValueError, TypeError) to confirm it
+   also returns 500 with the static body.
+  2. Happy path still returns 200 after all changes — we verified 404 and 500 but didn't re-run GET
+  /api/customer/CUST-001 with postgres running to confirm the 200 path was not broken.
+  3. Response body contains no exception message text — confirmed by eye but not asserted programmatically (e.g.
+  checking the body does not contain "Database", "psycopg2", or "connection").
+  4. "detail" value is exactly "Internal server error" — not "internal server error" (lowercase) or any other variant.
+  Observed from output but not asserted with a string equality check.
+  5. Global handler does not log str(exc) to stdout/stderr — the spec prohibits raw exception text in logs. Container
+  logs were not inspected with docker compose logs api to confirm no raw exception text was emitted.
 ```
 
 *For each item identified: accepted (added case) / rejected (reason)*
 
+┌────────────────────────────┬──────────┬──────────────────────────────────────────────────────────────────────────────┐
+│ Item                       │ Decision │ Rationale                                                                     │
+├────────────────────────────┼──────────┼──────────────────────────────────────────────────────────────────────────────┤
+│ 1. Global handler fires    │ REJECTED │ The global handler is a simple one-liner returning a constant response.      │
+│    for non-RuntimeError    │          │ The logic is trivially correct, and testing it would require artificially    │
+│                            │          │ injecting exceptions into routes, which adds little practical value.         │
+├────────────────────────────┼──────────┼──────────────────────────────────────────────────────────────────────────────┤
+│ 2. Happy path still        │ ACCEPTED │ Important regression check to ensure normal flow is unaffected. Verified     │
+│    returns 200             │          │ using GET /api/customer/CUST-001 with PostgreSQL running.                    │
+├────────────────────────────┼──────────┼──────────────────────────────────────────────────────────────────────────────┤
+│ 3. Body contains no        │ REJECTED │ Response is constructed from a constant (_INTERNAL_ERROR). No dynamic        │
+│    exception message text  │          │ interpolation occurs, so this case is guaranteed by design.                  │
+├────────────────────────────┼──────────┼──────────────────────────────────────────────────────────────────────────────┤
+│ 4. "detail" value casing   │ REJECTED │ The value is a fixed string literal in _INTERNAL_ERROR. It is directly       │
+│    is exactly correct      │          │ observable in code and output, so an additional assertion adds no value.     │
+├────────────────────────────┼──────────┼──────────────────────────────────────────────────────────────────────────────┤
+│ 5. Logs do not emit raw    │ REJECTED │ No logging of str(exc) or similar exists in the handler. Code review         │
+│    str(exc)                │          │ confirms this behavior, making runtime log validation unnecessary.           │
+└────────────────────────────┴──────────┴──────────────────────────────────────────────────────────────────────────────┘
+
 ### Code Review
 
-- [ ] `except RuntimeError` handler uses a static string `"Internal server error"` — no `str(e)` or `repr(e)` interpolation
-- [ ] Global exception handler (`@app.exception_handler(Exception)`) is present and also returns the static string
-- [ ] No `raise` in any exception handler that re-raises with detail attached
-- [ ] No `print(e)` or `logging.error(str(e))` — raw exception text is not written to stdout/stderr
-- [ ] Both the route-level handler and the global handler return identical static bodies
+- [Yes] `except RuntimeError` handler uses a static string `"Internal server error"` — no `str(e)` or `repr(e)` interpolation
+- [Yes] Global exception handler (`@app.exception_handler(Exception)`) is present and also returns the static string
+- [Yes] No `raise` in any exception handler that re-raises with detail attached
+- [Yes] No `print(e)` or `logging.error(str(e))` — raw exception text is not written to stdout/stderr
+- [Yes] Both the route-level handler and the global handler return identical static bodies
 
 ### Scope Decisions
 
-| Item | Decision | Rationale |
-|---|---|---|
-| | | |
-
+No scope decisions for this task — implementation matched the spec exactly
 ### Verification Verdict
 
-- [ ] All planned cases passed
-- [ ] CD challenge reviewed
-- [ ] Code review complete (invariant-touching)
-- [ ] Scope decisions documented
+- [Yes] All planned cases passed
+- [Yes] CD challenge reviewed
+- [Yes] Code review complete (invariant-touching)
+- [Yes] Scope decisions documented
 
 **Status:**
-
+Completed
 ---
 
 ## Task 3.4 — Response shape enforcement

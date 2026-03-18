@@ -1,5 +1,5 @@
 import os
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from app.db import get_customer_by_id
 
@@ -11,6 +11,13 @@ for _var in _REQUIRED_ENV_VARS:
 
 app = FastAPI()
 
+_INTERNAL_ERROR = {"detail": "Internal server error"}
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    return JSONResponse(status_code=500, content=_INTERNAL_ERROR)
+
 
 @app.get("/health")
 def health():
@@ -19,7 +26,10 @@ def health():
 
 @app.get("/api/customer/{customer_id}")
 async def get_customer(customer_id: str):
-    customer = get_customer_by_id(customer_id)
+    try:
+        customer = get_customer_by_id(customer_id)
+    except RuntimeError:
+        return JSONResponse(status_code=500, content=_INTERNAL_ERROR)
     if customer is None:
         return JSONResponse(status_code=404, content={"detail": "Customer not found"})
     return JSONResponse(status_code=200, content={
