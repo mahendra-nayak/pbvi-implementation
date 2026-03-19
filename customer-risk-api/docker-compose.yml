@@ -17,6 +17,7 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+    networks: [risk_net]
 
   api:
     build: ./api
@@ -32,6 +33,14 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    networks: [risk_net, external_net]
 
 volumes:
   pgdata:
+
+networks:
+  risk_net:
+    driver: bridge
+    internal: true
+  external_net:
+    driver: bridge

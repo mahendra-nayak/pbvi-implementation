@@ -16,7 +16,7 @@
 | 4.3 | Credential safety — key not in responses or logs |Completed |578712d |
 | 4.4 | Error surface audit |Completed |6f543b6 |
 | 4.5 | UI route exempt from auth |Completed |b24598b|
-| 4.6 | Compose network isolation (no external calls) | | |
+| 4.6 | Compose network isolation (no external calls) |In Progress | |
 
 ---
 
