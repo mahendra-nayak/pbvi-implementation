@@ -73,8 +73,19 @@ def test_db_failure_500():
     print("T3 PASS: 500 body is exact, no stack trace or module names leaked")
 
 
+def test_ui_root():
+    response = client.get("/")
+    assert response.status_code == 200, f"Expected 200, got {response.status_code}"
+    assert "text/html" in response.headers.get("content-type", ""), (
+        f"Expected text/html, got {response.headers.get('content-type')}"
+    )
+    assert API_KEY not in response.text, "API_KEY value found in UI response body"
+    print("T4 PASS: GET / returns 200 text/html with no API key value")
+
+
 if __name__ == "__main__":
     test_missing_key_401()
     test_unknown_customer_404()
     test_db_failure_500()
+    test_ui_root()
     print("All error surface tests PASSED")

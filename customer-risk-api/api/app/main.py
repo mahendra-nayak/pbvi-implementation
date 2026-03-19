@@ -3,7 +3,7 @@ import os
 import sys
 from contextlib import asynccontextmanager
 from fastapi import Depends, FastAPI, HTTPException, Request, Security
-from fastapi.responses import JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.security import APIKeyHeader
 from app.db import get_connection, get_customer_by_id
 from app.models import CustomerRiskResponse
@@ -51,6 +51,11 @@ async def verify_api_key(api_key: str = Security(api_key_header)):
 @app.exception_handler(Exception)
 async def unhandled_exception_handler(request: Request, exc: Exception):
     return JSONResponse(status_code=500, content=_INTERNAL_ERROR)
+
+
+@app.get("/", response_class=HTMLResponse)
+def ui():
+    return HTMLResponse("<html><body><h1>Customer Risk API UI</h1></body></html>")
 
 
 @app.get("/health")

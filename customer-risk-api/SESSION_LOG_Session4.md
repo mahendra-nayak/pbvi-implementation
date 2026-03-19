@@ -15,7 +15,7 @@
 | 4.2 | Authentication-before-database-access ordering | Completed|096eb87 |
 | 4.3 | Credential safety — key not in responses or logs |Completed |578712d |
 | 4.4 | Error surface audit |Completed |6f543b6 |
-| 4.5 | UI route exempt from auth | | |
+| 4.5 | UI route exempt from auth |In Progress | |
 | 4.6 | Compose network isolation (no external calls) | | |
 
 ---
