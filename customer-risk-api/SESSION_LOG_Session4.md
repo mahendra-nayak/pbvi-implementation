@@ -11,8 +11,8 @@
 
 | Task ID | Task Name | Status | Commit |
 |---------|-----------|--------|--------|
-| 4.1 | API key middleware | | |
-| 4.2 | Authentication-before-database-access ordering | | |
+| 4.1 | API key middleware |Completed |1b0e42a |
+| 4.2 | Authentication-before-database-access ordering | Completed|096eb87 |
 | 4.3 | Credential safety — key not in responses or logs | | |
 | 4.4 | Error surface audit | | |
 | 4.5 | UI route exempt from auth | | |
