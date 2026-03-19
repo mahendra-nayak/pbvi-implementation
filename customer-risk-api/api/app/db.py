@@ -4,6 +4,12 @@
 import os
 import psycopg2
 
+_query_count = 0  # module-level counter (for testing only)
+
+
+def get_query_count():
+    return _query_count
+
 
 def get_connection():
     """Return a new psycopg2 connection using environment variables.
@@ -42,6 +48,8 @@ def get_customer_by_id(customer_id: str) -> dict | None:
     Raises RuntimeError("Database query failed") on any database error —
     the raw psycopg2 error is not propagated.
     """
+    global _query_count
+    _query_count += 1
     conn = get_connection()
     try:
         cur = conn.cursor()
