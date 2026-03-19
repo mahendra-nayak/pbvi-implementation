@@ -1,8 +1,8 @@
 # Session Log — Session 4: Authentication & Security
 
 **Session:** Session 4  
-**Date:**  
-**Engineer:**  
+**Date:**  19-03-2026
+**Engineer:** Mahendra Nayak 
 **Branch:** session/s04_auth_security
 
 ---
@@ -14,7 +14,7 @@
 | 4.1 | API key middleware |Completed |1b0e42a |
 | 4.2 | Authentication-before-database-access ordering | Completed|096eb87 |
 | 4.3 | Credential safety — key not in responses or logs |Completed |578712d |
-| 4.4 | Error surface audit | | |
+| 4.4 | Error surface audit |Completed |6f543b6 |
 | 4.5 | UI route exempt from auth | | |
 | 4.6 | Compose network isolation (no external calls) | | |
 

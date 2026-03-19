@@ -1,8 +1,8 @@
 # Verification Record — Session 4: Authentication & Security
 
 **Session:** Session 4  
-**Date:**  
-**Engineer:**  
+**Date:**  19-03-2026
+**Engineer:**  Mahendra Nayak
 
 ---
 
