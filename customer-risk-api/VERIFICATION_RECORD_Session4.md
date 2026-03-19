@@ -187,16 +187,46 @@ Source: EXECUTION_PLAN.md Session 4
 
 | Case | Scenario | Expected | Result |
 |------|----------|----------|--------|
-| TC-1 | 401 body check | Exactly `{"detail": "Unauthorized"}` | |
-| TC-2 | 404 body check | Exactly `{"detail": "Customer not found"}` | |
-| TC-3 | 500 body check | Exactly `{"detail": "Internal server error"}` | |
-| TC-4 | Forbidden strings absent from all error bodies | Zero matches | |
+| TC-1 | 401 body check | Exactly `{"detail": "Unauthorized"}` |PASS |
+| TC-2 | 404 body check | Exactly `{"detail": "Customer not found"}` |PASS |
+| TC-3 | 500 body check | Exactly `{"detail": "Internal server error"}` |PASS |
+| TC-4 | Forbidden strings absent from all error bodies | Zero matches |PASS |
 
 ### Prediction Statement
 
+  - T1 (401) — Body will be exactly {"detail":"Unauthorized"}. No forbidden strings present — the response is built from
+   a static HTTPException with no interpolation.
+  - T2 (404) — Body will be exactly {"detail":"Customer not found"}. No SQL keywords or customer_id — the 404 response
+  is a static string constant, never constructed from query input.
+  - T3 (500) — Body will be exactly {"detail":"Internal server error"}. No stack trace or module names — the 500
+  response is built from _INTERNAL_ERROR constant, and the RuntimeError is caught before it reaches any serialisation
+  path.
 ### CD Challenge Output
-[Paste CD's response to: 'What did you not test in this task?'
-For each item: accepted (added case) / rejected (reason).]
+ 1. 200 happy path checked against forbidden strings — only error paths (401, 404, 500) were tested. A valid request
+  returning 200 was not checked against the forbidden strings list.
+  2. /health response checked against forbidden strings — the health endpoint was not included in test_error_surface.py
+  (it was in test_credential_safety.py but not here).
+  3. Forbidden headers check on 200 response — assert_clean_error checks headers, but it was only called on error
+  responses. The 200 path header check was not run.
+  4. "db error" string from the mocked RuntimeError does not appear in 500 body — the mock raises RuntimeError("db
+  error"); we confirmed "db error" is not in the body by inspection but it's not in FORBIDDEN_IN_BODY and was not
+  explicitly asserted.
+  5. Forbidden strings list is complete — the list covers known leakage vectors but not exhaustively. For example,
+  "riskdb" (the database name), "172.18" (internal Docker IP), or "api_user" (the DB role name) could also appear in a
+  misconfigured error but are not in FORBIDDEN_IN_BODY.
+  6. Content-Type header checked on 200 and 404 live responses — assert_clean_error checks Content-Type but only via
+  TestClient. A live curl against the running container did not verify Content-Type: application/json on any response.
+
+For each item: accepted (added case) / rejected (reason).
+
+| Item | Decision | Rationale |
+|------|----------|-----------|
+| 200 path checked against forbidden strings | REJECTED | Response fields from DB cannot contain forbidden strings |
+| /health checked against forbidden strings | REJECTED | Static {"status":"ok"} response |
+| Forbidden headers on 200 response | REJECTED | Headers managed globally by framework |
+| "db error" from mock in 500 body | REJECTED | Replaced by constant error response |
+| FORBIDDEN_IN_BODY list incomplete | ACCEPTED (PARTIAL) | Add "riskdb" and "api_user" for safety |
+| Content-Type via curl check | REJECTED | Same ASGI stack; redundant |
 
 ### Code Review
 Invariants touched: INV-06
@@ -205,15 +235,15 @@ Invariants touched: INV-06
 - Confirm FastAPI's default `debug=False` (do not set `app = FastAPI(debug=True)` in production code path)
 
 ### Scope Decisions
-
+No scope decisions for this task — implementation matched the spec exactly.
 ### Verification Verdict
-[ ] All planned cases passed
-[ ] CD challenge reviewed
-[ ] Code review complete (invariant-touching)
-[ ] Scope decisions documented
+[Yes] All planned cases passed
+[Yes] CD challenge reviewed
+[Yes] Code review complete (invariant-touching)
+[Yes] Scope decisions documented
 
 **Status:**
-
+Completed
 ---
 
 ## Task 4.5 — UI route exempt from auth
