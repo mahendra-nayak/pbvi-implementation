@@ -1,8 +1,10 @@
+import hmac
 import os
 import sys
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, HTTPException, Request, Security
 from fastapi.responses import JSONResponse
+from fastapi.security import APIKeyHeader
 from app.db import get_connection, get_customer_by_id
 from app.models import CustomerRiskResponse
 from app.constants import VALID_TIERS
@@ -36,6 +38,15 @@ app = FastAPI(lifespan=lifespan)
 
 _INTERNAL_ERROR = {"detail": "Internal server error"}
 
+api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
+
+
+async def verify_api_key(api_key: str = Security(api_key_header)):
+    expected = os.environ["API_KEY"]
+    if api_key is None or not hmac.compare_digest(api_key, expected):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    return api_key
+
 
 @app.exception_handler(Exception)
 async def unhandled_exception_handler(request: Request, exc: Exception):
@@ -47,7 +58,7 @@ def health():
     return {"status": "ok"}
 
 
-@app.get("/api/customer/{customer_id}", response_model=CustomerRiskResponse)
+@app.get("/api/customer/{customer_id}", response_model=CustomerRiskResponse, dependencies=[Depends(verify_api_key)])
 async def get_customer(customer_id: str):
     try:
         customer = get_customer_by_id(customer_id)
