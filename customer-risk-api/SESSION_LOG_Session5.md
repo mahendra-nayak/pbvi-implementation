@@ -11,8 +11,8 @@
 
 | Task ID | Task Name | Status | Commit |
 |---------|-----------|--------|--------|
-| 5.1 | Static UI — HTML page with customer lookup | | |
-| 5.2 | Server-side API key injection into UI | | |
+| 5.1 | Static UI — HTML page with customer lookup | Completed| 9b8d02c |
+| 5.2 | Server-side API key injection into UI | Completed|b9b8165 |
 | 5.3 | UI error path display | | |
 | 5.4 | Full invariant verification script | | |
 | 5.5 | README completion and final cleanup | | |

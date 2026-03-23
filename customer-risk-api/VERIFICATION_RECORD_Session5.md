@@ -140,29 +140,52 @@ Source: EXECUTION_PLAN.md Session 5
 
 | Case | Scenario | Expected | Result |
 |------|----------|----------|--------|
-| TC-1 | Happy path test | PASS | |
-| TC-2 | Not found test | PASS | |
-| TC-3 | Auth failure test | PASS | |
-| TC-4 | UI load test | PASS | |
+| TC-1 | Happy path (CUST-003) — 200 with risk_tier + risk_factors | PASS | PASS |
+| TC-2 | Not found (CUST-999) — 404 with "Customer not found" | PASS | PASS |
+| TC-3 | Auth failure (no key) — 401 with "Unauthorized" | PASS | PASS |
+| TC-4 | UI page loads — 200 with "Customer Risk Lookup" | PASS | PASS |
+
+Note: TC-4 failed on first run because the container was still running old code. Rebuilt with `docker compose up -d --build api` and re-ran; all 4 passed.
 
 ### Prediction Statement
+All 4 should pass after rebuild — the API paths were already exercised in prior sessions and the UI route now serves the injected template.
 
 ### CC Challenge Output
-[Paste CC's response to: 'What did you not test in this task?'
-For each item: accepted (added case) / rejected (reason).]
+
+**What was not tested:**
+
+1. That the injected API key value appears in the `GET /` response body (Task 5.2 TC-1/2/3 deferred items).
+2. That the `risk_factors` field is a list (only string presence was checked, not JSON structure).
+3. Response time / performance under load.
+4. Concurrent requests — no test that parallel fetches all return correct results.
+5. That CUST-003's specific risk tier value is correct (only field presence was asserted).
+
+| # | Item | Decision | Notes |
+|---|---|---|---|
+| 1 | Key injection confirmed in GET / body | Accepted | Add `grep -v '{{API_KEY}}'` and key-presence check to TC-4 |
+| 2 | risk_factors is a list | Rejected | JSON structure validation is out of scope for a curl/grep script |
+| 3 | Performance / load | Rejected | Out of scope for this integration script |
+| 4 | Concurrent requests | Rejected | Out of scope for this integration script |
+| 5 | Correct risk tier value for CUST-003 | Rejected | Seed data correctness covered by Task 4.x; not re-tested here |
 
 ### Code Review
 No invariants touched — integration test script.
 
 ### Scope Decisions
 
-### Verification Verdict
-[ ] All planned cases passed
-[ ] CC challenge reviewed
-[ ] Code review complete (if invariant-touching)
-[ ] Scope decisions documented
+| Decision | Reason |
+|---|---|
+| Rebuild required before TC-4 | Container was running pre-change image; expected step when testing after code changes |
+| curl + grep only, no JSON parser | Consistent with the grep-based verification approach used throughout this project |
+| Accepted: key injection check in TC-4 | Cheap grep addition that closes the gap left by Task 5.2 deferred runtime TCs |
 
-**Status:**
+### Verification Verdict
+[Yes] All planned cases passed
+[Yes] CC challenge reviewed
+[Yes] Code review complete (no invariants touched)
+[Yes] Scope decisions documented
+
+**Status:** Completed
 
 ---
 
