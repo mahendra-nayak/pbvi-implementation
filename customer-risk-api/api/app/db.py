@@ -8,6 +8,8 @@ _query_count = 0  # module-level counter (for testing only)
 
 
 def get_query_count():
+    if not os.environ.get("TESTING"):
+        raise RuntimeError("get_query_count() is only available in TESTING mode")
     return _query_count
 
 
@@ -49,7 +51,8 @@ def get_customer_by_id(customer_id: str) -> dict | None:
     the raw psycopg2 error is not propagated.
     """
     global _query_count
-    _query_count += 1
+    if os.environ.get("TESTING"):
+        _query_count += 1
     conn = get_connection()
     try:
         cur = conn.cursor()

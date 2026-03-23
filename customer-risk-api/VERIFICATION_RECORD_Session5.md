@@ -1,8 +1,8 @@
 # Verification Record — Session 5: UI & Integration
 
 **Session:** Session 5  
-**Date:**  
-**Engineer:**  
+**Date:**  23-03-2026
+**Engineer:**  Mahendra Nayak
 
 ---
 
@@ -254,29 +254,54 @@ Source: EXECUTION_PLAN.md Session 5
 
 | Case | Scenario | Expected | Result |
 |------|----------|----------|--------|
-| TC-1 | README has all 6 env vars documented | `grep -c "POSTGRES_" README.md` ≥ 3 | |
-| TC-2 | No debug artifacts in source | `grep -rn "print(e\|debug=True\|api_key)" api/app/` → no matches | |
-| TC-3 | Final smoke test passes | `bash scripts/smoke_test.sh` → PASSED | |
-| TC-4 | All invariants pass | `bash scripts/verify_invariants.sh` → 12/12 | |
+| TC-1 | README has all 6 env vars documented | `grep -c "POSTGRES_" README.md` ≥ 3 | PASS — outputs 3 |
+| TC-2 | No debug artifacts in source | `grep -rn "print(e\|debug=True\|api_key)" api/app/` → no matches | PASS — false positive on `verify_api_key` function name; actual debug artifacts absent |
+| TC-3 | Final smoke test passes | `bash scripts/smoke_test.sh` → PASSED | PASS |
+| TC-4 | All invariants pass | `bash scripts/verify_invariants.sh` → 12/12 | PASS — 11/12 on first run (INV-11 broke after `_query_count` guard added); fixed by passing `-e TESTING=1` to exec |
 
 ### Prediction Statement
+TC-1/TC-2 should pass clean; TC-3/TC-4 require a running stack and may take time on the full restart inside verify_invariants.
 
 ### CC Challenge Output
-[Paste CC's response to: 'What did you not test in this task?'
-For each item: accepted (added case) / rejected (reason).]
+
+**What was not tested:**
+
+1. That the README renders correctly as Markdown — only content was verified, not table/code block rendering.
+2. The TC-2 grep pattern `api_key` matches the function name `verify_api_key` — a false positive in the verification command itself.
+3. That `.env.example` exists and documents all 6 variables — only `.env` in `.gitignore` was checked.
+4. That the `_query_count` guard doesn't break `test_credential_safety.py` or other test scripts that don't set `TESTING`.
+5. That `TESTING=1` passed via `docker compose exec -e` doesn't leak into the running container after exec exits.
+
+| # | Item | Decision | Notes |
+|---|---|---|---|
+| 1 | README Markdown rendering | Rejected | Content correctness is what matters; rendering is a display concern |
+| 2 | TC-2 false positive on `verify_api_key` | Accepted | Grep pattern too broad — verified manually that no actual debug artifacts exist; `print(e)` and `debug=True` are absent |
+| 3 | `.env.example` completeness | Accepted | Verified — all 6 variables present with `changeme` placeholders |
+| 4 | `_query_count` guard breaking other test scripts | Accepted | Verified — `test_credential_safety.py`, `test_error_surface.py`, `test_db_connection.py` do not call `get_query_count()`; no breakage |
+| 5 | `TESTING=1` leaking into container | Rejected | `docker compose exec -e` sets env only for that exec process; container environment is unaffected |
 
 ### Code Review
 Invariants touched: All (final validation)
-- Confirm `debug=True` is absent from `FastAPI()` instantiation
-- Confirm no raw exception text is printed or logged
-- Confirm all test-only code is gated or removed
+
+| Check | Result |
+|---|---|
+| `debug=True` absent from `FastAPI(lifespan=lifespan)` | PASS |
+| No `print(e)` or raw exception text in `main.py` / `db.py` — only startup diagnostic prints remain | PASS |
+| `_query_count` counter gated behind `os.environ.get("TESTING")` in both increment and read paths | PASS |
+| No other test scripts call `get_query_count()` without `TESTING` set | PASS |
 
 ### Scope Decisions
 
-### Verification Verdict
-[ ] All planned cases passed
-[ ] CC challenge reviewed
-[ ] Code review complete (invariant-touching)
-[ ] Scope decisions documented
+| Decision | Reason |
+|---|---|
+| TC-2 false positive documented, not fixed in spec command | The grep pattern is in the spec; the real check (no debug artifacts) was verified manually |
+| INV-11 fix applied to `verify_invariants.sh` (added `-e TESTING=1`) | The `_query_count` guard was introduced in this task; fixing the caller is the correct response rather than reverting the guard |
+| `.env.example` verified as bonus check | Referenced in README setup steps; confirming it has all 6 variables is a cheap, meaningful check |
 
-**Status:**
+### Verification Verdict
+[Yes] All planned cases passed (TC-4 required one fix to verify_invariants.sh before 12/12)
+[Yes] CC challenge reviewed
+[Yes] Code review complete (all invariants)
+[Yes] Scope decisions documented
+
+**Status:** Completed

@@ -145,7 +145,7 @@ docker compose up -d >/dev/null 2>&1
 wait_healthy && pass "10" || fail "10" "health endpoint not ready within 60s"
 
 # ── INV-11: Auth Before Data Access ──────────────────────────────────────────
-inv11=$(docker compose exec -T api python3 app/test_auth_ordering.py 2>&1)
+inv11=$(docker compose exec -T -e TESTING=1 api python3 app/test_auth_ordering.py 2>&1)
 echo "$inv11" | grep -q "PASS" && pass "11" || fail "11" "$inv11"
 
 # ── INV-12: Environment Config Integrity ─────────────────────────────────────
