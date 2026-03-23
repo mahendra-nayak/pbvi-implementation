@@ -16,8 +16,20 @@ for _var in _REQUIRED_ENV_VARS:
         raise RuntimeError(f"Missing required environment variable: {_var}")
 
 
+ui_html: str = ""
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    global ui_html
+    try:
+        with open("/app/ui/index.html", "r") as f:
+            ui_template = f.read()
+    except FileNotFoundError:
+        print("FATAL: ui/index.html not found at /app/ui/index.html. Cannot start.", flush=True)
+        sys.exit(1)
+    ui_html = ui_template.replace("{{API_KEY}}", os.environ["API_KEY"], 1)
+
     conn = None
     try:
         conn = get_connection()
@@ -55,7 +67,7 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
 
 @app.get("/", response_class=HTMLResponse)
 def ui():
-    return HTMLResponse("<html><body><h1>Customer Risk API UI</h1></body></html>")
+    return HTMLResponse(ui_html)
 
 
 @app.get("/health")

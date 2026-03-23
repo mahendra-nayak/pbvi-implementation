@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Customer Risk Lookup</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #f5f5f5;
+      color: #222;
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 48px 16px;
+    }
+
+    .container {
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+      padding: 40px 36px;
+      width: 100%;
+      max-width: 560px;
+      min-width: 320px;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 28px;
+      color: #111;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 24px;
+    }
+
+    #customer-id-input {
+      flex: 1;
+      padding: 10px 14px;
+      font-size: 1rem;
+      border: 1.5px solid #ccc;
+      border-radius: 5px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    #customer-id-input:focus {
+      border-color: #4a6cf7;
+    }
+
+    #lookup-btn {
+      padding: 10px 20px;
+      font-size: 1rem;
+      font-weight: 600;
+      background: #4a6cf7;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background 0.15s;
+      white-space: nowrap;
+    }
+
+    #lookup-btn:hover { background: #3556e0; }
+    #lookup-btn:active { background: #2644c8; }
+
+    #result-panel, #error-panel { display: none; }
+
+    #result-panel {
+      border: 1.5px solid #d4d4d4;
+      border-radius: 6px;
+      padding: 20px 22px;
+    }
+
+    .result-row {
+      margin-bottom: 14px;
+    }
+
+    .result-row:last-child { margin-bottom: 0; }
+
+    .label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #666;
+      margin-bottom: 4px;
+    }
+
+    .value {
+      font-size: 1rem;
+      color: #111;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 3px 12px;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+
+    .badge-low    { background: #d1fae5; color: #065f46; }
+    .badge-medium { background: #fef3c7; color: #92400e; }
+    .badge-high   { background: #fee2e2; color: #991b1b; }
+
+    #risk-factors-list {
+      margin: 0;
+      padding-left: 20px;
+      color: #333;
+      line-height: 1.7;
+    }
+
+    #error-panel {
+      border: 1.5px solid #fca5a5;
+      background: #fff1f1;
+      border-radius: 6px;
+      padding: 14px 18px;
+      color: #b91c1c;
+      font-size: 0.97rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Customer Risk Lookup</h1>
+
+    <div class="input-row">
+      <input
+        type="text"
+        id="customer-id-input"
+        placeholder="Enter Customer ID"
+        autocomplete="off"
+      >
+      <button id="lookup-btn">Look up</button>
+    </div>
+
+    <div id="result-panel">
+      <div class="result-row">
+        <div class="label">Customer ID</div>
+        <div class="value" id="result-customer-id"></div>
+      </div>
+      <div class="result-row">
+        <div class="label">Risk Tier</div>
+        <div class="value"><span id="result-risk-tier" class="badge"></span></div>
+      </div>
+      <div class="result-row">
+        <div class="label">Risk Factors</div>
+        <ul id="risk-factors-list"></ul>
+      </div>
+    </div>
+
+    <div id="error-panel"></div>
+  </div>
+
+  <script>
+    const input     = document.getElementById('customer-id-input');
+    const btn       = document.getElementById('lookup-btn');
+    const resultPanel = document.getElementById('result-panel');
+    const errorPanel  = document.getElementById('error-panel');
+
+    function hide(el) { el.style.display = 'none'; }
+    function show(el, display) { el.style.display = display || 'block'; }
+
+    function showError(msg) {
+      hide(resultPanel);
+      errorPanel.textContent = msg;
+      show(errorPanel);
+    }
+
+    function showResult(data) {
+      hide(errorPanel);
+
+      document.getElementById('result-customer-id').textContent = data.customer_id;
+
+      const tierEl = document.getElementById('result-risk-tier');
+      const tier = (data.risk_tier || '').toUpperCase();
+      tierEl.textContent = tier;
+      tierEl.className = 'badge';
+      if (tier === 'LOW')    tierEl.classList.add('badge-low');
+      else if (tier === 'MEDIUM') tierEl.classList.add('badge-medium');
+      else if (tier === 'HIGH')   tierEl.classList.add('badge-high');
+
+      const list = document.getElementById('risk-factors-list');
+      list.innerHTML = '';
+      (data.risk_factors || []).forEach(function(factor) {
+        const li = document.createElement('li');
+        li.textContent = factor;
+        list.appendChild(li);
+      });
+
+      show(resultPanel);
+    }
+
+    async function lookup() {
+      const id = input.value.trim();
+      if (!id) return;
+
+      hide(resultPanel);
+      hide(errorPanel);
+
+      try {
+        const response = await fetch('/api/customer/' + encodeURIComponent(id), {
+          headers: { 'X-API-Key': '{{API_KEY}}' }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          showResult(data);
+        } else if (response.status === 404) {
+          showError('Customer not found.');
+        } else if (response.status === 401) {
+          showError('Authentication error. Please contact your administrator.');
+        } else {
+          showError('An unexpected error occurred.');
+        }
+      } catch (_) {
+        showError('An unexpected error occurred.');
+      }
+    }
+
+    btn.addEventListener('click', lookup);
+    input.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') lookup();
+    });
+  </script>
+</body>
+</html>
